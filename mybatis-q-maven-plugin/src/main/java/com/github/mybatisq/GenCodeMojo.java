@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -77,6 +78,12 @@ public class GenCodeMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
+
+    /**
+     * 表名前缀
+     */
+    @Parameter
+    private String tablePrefix;
 
     private ClassLoader getClassLoader() throws MojoExecutionException {
         try {
@@ -150,6 +157,13 @@ public class GenCodeMojo extends AbstractMojo {
         }
         return javaType;
     }
+
+    private String generateMappedName(String originalName, String prefix) {
+        if (!StringUtils.isEmpty(prefix)) {
+            originalName = originalName.substring(prefix.length());
+        }
+        return generateMappedName(originalName);
+    }
     
     private String generateMappedName(String originalName) {
         String[] splitWords = originalName.split("[_-]");
@@ -212,7 +226,7 @@ public class GenCodeMojo extends AbstractMojo {
                     .map(c -> {
                         Table table = new Table();
                         table.setOriginalName(c.getSimpleName());
-                        table.setMappedName(generateMappedName(table.getOriginalName()));
+                        table.setMappedName(generateMappedName(table.getOriginalName(), tablePrefix));
                         table.setColumns(Stream.of(c.getDeclaredFields()).map(f -> {
                             Column column = new Column();
                             column.setOriginalName(f.getName());
@@ -240,7 +254,7 @@ public class GenCodeMojo extends AbstractMojo {
                 while (resultSet.next()) {
                     Table table = new Table();
                     table.setOriginalName(resultSet.getString("Name"));
-                    table.setMappedName(generateMappedName(table.getOriginalName()));
+                    table.setMappedName(generateMappedName(table.getOriginalName(), tablePrefix));
                     table.setComment(resultSet.getString("Comment"));
                     table.setColumns(new ArrayList<>());
                     tables.add(table);
